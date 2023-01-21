@@ -1,0 +1,100 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: homelabping-rollout
+spec:
+  selector:
+    matchLabels:
+      app: homelabping
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: homelabping
+    spec:
+      containers:
+        - name: homelabping
+          image: "{{ .Values.code_image }}"
+          ports:
+            - containerPort: 80
+            - containerPort: 9090
+              name: http
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+          resources:
+            limits:
+              cpu: 100m
+              memory: 256Mi
+            requests:
+              cpu: 80m
+              memory: 128Mi
+          env:
+            - name: ENVNAME
+              value: "{{ .Values.envname }}"
+            - name: IMAGE_TAG
+              value: "{{ .Values.image_tag }}"
+            - name: OLTP_ENDPOINT
+              value: "http://simplest-collector.monitoring.svc:4317"
+            - name: MAINDB_USER
+              value: pingapp
+            - name: MAINDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: maindb-postgresql
+                  key: pingapp-password
+
+  strategy:
+    canary:
+      canaryService: homelabping-canary-service
+      stableService: homelabping-stable-service
+      canaryMetadata:
+        labels:
+          role: canary
+      stableMetadata:
+        labels:
+          role: stable
+
+      trafficRouting:
+        traefik:
+          weightedTraefikServiceName: homelabping-service
+      steps:
+        - setWeight: 20
+        - pause: { duration: "60s" }
+        - setWeight: 50
+        - pause: { duration: "60s" }
+        - setWeight: 80
+        - pause: { duration: "60s" }
+      analysis:
+        templates:
+          - templateName: maintain-success-rate
+        startingStep: 2
+        args:
+          - name: service-monitor-name
+            value: "production-homelabping-metrics-canary"
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: maintain-success-rate
+spec:
+  args:
+    - name: service-monitor-name
+  metrics:
+    - name: success-rate
+      interval: 10s
+      successCondition: result[0] <= 0.2
+      failureCondition: result[0] > 0.2
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://cluster-prom-kube-promethe-prometheus.monitoring.svc:9090
+          query: |
+            sum(microsoft_aspnetcore_hosting_failed_requests{service="{{`{{args.service-monitor-name}}`}}"})/sum(microsoft_aspnetcore_hosting_total_requests {service="{{`{{args.service-monitor-name}}`}}"})

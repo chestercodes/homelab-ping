@@ -1,0 +1,54 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: "{{ .Release.Namespace }}"
+  name: "wf-report-sync-success-{{ .Values.app_name }}"
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    spec:
+      containers:
+        - name: trigger-workflow
+          image: curlimages/curl
+          # don't fail Job if the calls fails
+          command:
+            - "sh"
+            - "-c"
+            - |
+              curl -X POST http://workflow-reporter.pipeline.svc.cluster.local:80/workflow/update -H "Content-Type: application/json" -d '{ "WorkflowName": "{{ .Values.deploying_workflow_name }}", "App": "{{ .Values.app_name }}", "Success": true }'
+      restartPolicy: Never
+  backoffLimit: 1
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: "{{ .Release.Namespace }}"
+  name: "wf-report-sync-fail-{{ .Values.app_name }}"
+  annotations:
+    argocd.argoproj.io/hook: SyncFail
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    spec:
+      containers:
+        - name: trigger-workflow
+          image: curlimages/curl
+          # don't fail Job if the calls fails
+          command:
+            - "sh"
+            - "-c"
+            - |
+              curl -X POST http://workflow-reporter.pipeline.svc.cluster.local:80/workflow/update -H "Content-Type: application/json" -d '{ "WorkflowName": "{{ .Values.deploying_workflow_name }}", "App": "{{ .Values.app_name }}", "Success": false }'
+      restartPolicy: Never
+  backoffLimit: 1
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: "{{ .Release.Namespace }}"
+  name: "{{ .Values.app_name }}-trigger-sync"
+data:
+  # filthy hack to ensure that the workflow reporter when build is run
+  changes_each_deploy: "{{ .Values.deploying_workflow_name }}"

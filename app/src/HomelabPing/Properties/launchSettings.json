@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:48139",
+      "sslPort": 44357
+    }
+  },
+  "profiles": {
+    "HomelabPing": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "ping",
+      "applicationUrl": "https://localhost:7260;http://localhost:5171",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ENVNAME": "Development",
+        "OLTP_ENDPOINT": "http://localhost:4317",
+        "IMAGE_TAG": "v123456",
+        "MAINDB_USER": "pingapp",
+        "MAINDB_PASSWORD": "XXXX",
+        "HOST": "localhost"
+      }
+    },
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "launchUrl": "ping",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

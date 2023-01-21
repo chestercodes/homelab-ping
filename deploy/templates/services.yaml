@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: homelabping-stable-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
+  selector:
+    app: homelabping
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: homelabping-canary-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
+  selector:
+    app: homelabping
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: TraefikService
+metadata:
+  name: homelabping-service
+spec:
+  weighted:
+    services:
+      - name: homelabping-stable-service # k8s service name that you need to create for stable application version
+        port: 80
+      - name: homelabping-canary-service # k8s service name that you need to create for new application version
+        port: 80

@@ -1,0 +1,78 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    Release: prom
+  name: "{{ .Release.Name }}-monitor-canary"
+  namespace: monitoring
+spec:
+  endpoints:
+    - interval: 10s
+      path: /metrics
+      scrapeTimeout: 5s
+      targetPort: http
+  namespaceSelector:
+    matchNames:
+      - "{{ .Release.Namespace }}"
+  selector:
+    matchLabels:
+      app: homelabping-metrics
+      role: canary
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    Release: prom
+  name: "{{ .Release.Name }}-monitor-stable"
+  namespace: monitoring
+spec:
+  endpoints:
+    - interval: 30s
+      path: /metrics
+      scrapeTimeout: 10s
+      targetPort: http
+  namespaceSelector:
+    matchNames:
+      - "{{ .Release.Namespace }}"
+  selector:
+    matchLabels:
+      app: homelabping-metrics
+      role: stable
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ .Release.Name }}-metrics-stable"
+  labels:
+    app: homelabping-metrics
+    role: stable
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 9090
+      protocol: TCP
+      name: http
+  selector:
+    app: homelabping
+    role: stable
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ .Release.Name }}-metrics-canary"
+  labels:
+    app: homelabping-metrics
+    role: canary
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 9090
+      protocol: TCP
+      name: http
+  selector:
+    app: homelabping
+    role: canary
+---

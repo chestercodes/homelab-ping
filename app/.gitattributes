@@ -1,0 +1,7 @@
+# Auto detect text files and perform LF normalization
+*          text=auto
+
+*.fs       text diff=fsharp
+*.fsx      text diff=fsharp
+# *.sln      text eol=crlf
+# *.fsproj   text eol=crlf
